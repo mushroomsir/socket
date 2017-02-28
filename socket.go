@@ -30,7 +30,7 @@ func (s *Socket) IsUse() (b bool) {
 	return
 }
 
-// Ping ...
+// Ping to detect whether the socket is closed.
 func (s *Socket) Ping() (b bool, err error) {
 	one := []byte{}
 	s.SetReadDeadline(time.Now())

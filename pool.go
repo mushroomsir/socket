@@ -25,7 +25,7 @@ func NewFactory(addres string) Factory {
 // Factory is a function to create new connections.
 type Factory func() (net.Conn, error)
 
-// NewPool ...
+// NewPool create a new socket pool with an initial capacity and maximum capacity
 func NewPool(initialCap, maxCap int, factory Factory) (pool *Pool, err error) {
 	if initialCap < 0 || maxCap <= 0 || initialCap > maxCap {
 		return nil, errors.New("invalid capacity settings")
