@@ -13,6 +13,8 @@ var (
 	ErrClosed = errors.New("pool is closed")
 	// ErrMaxedOut is the pool is already maxed out
 	ErrMaxedOut = errors.New("the pool is already maxed out")
+	// ErrCapacitySettings means the capacity arrguments is invalid
+	ErrCapacitySettings = errors.New("invalid capacity settings")
 )
 
 // NewFactory ...
@@ -38,7 +40,7 @@ func NewPool(initialCap, maxCap int, factory Factory) (pool *Pool, err error) {
 	// create initial connections, if something goes wrong, just close the pool error out.
 	for i := 0; i < initialCap; i++ {
 		conn, err := factory()
-		if err != nil {
+		if err != nil || conn == nil {
 			pool.Close()
 			return nil, fmt.Errorf("factory is not able to fill the pool: %s", err)
 		}
@@ -58,12 +60,13 @@ type Pool struct {
 // Get returns a new connection from the pool.
 func (p *Pool) Get() (socket *Socket, err error) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if p.sockets == nil {
 		return nil, ErrClosed
 	}
+	defer p.mu.Unlock()
 	for _, socket = range p.sockets {
 		if socket != nil && !socket.IsUse() {
+			socket.Use()
 			return
 		}
 	}
@@ -71,11 +74,15 @@ func (p *Pool) Get() (socket *Socket, err error) {
 		return nil, ErrMaxedOut
 	}
 	conn, err := p.factory()
-	if err != nil {
-		p.Close()
+	if err != nil || conn == nil {
+		for _, conn := range p.sockets {
+			conn.Close()
+		}
+		p.sockets = nil
 		return nil, fmt.Errorf("factory is not able to fill the pool: %s", err)
 	}
 	socket = p.wrapConn(conn)
+	socket.Use()
 	p.sockets = append(p.sockets, socket)
 	return
 }
@@ -97,6 +104,7 @@ func (p *Pool) Close() {
 	for _, conn := range p.sockets {
 		conn.Close()
 	}
+	p.sockets = nil
 }
 
 func (p *Pool) wrapConn(conn net.Conn) *Socket {

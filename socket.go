@@ -30,6 +30,13 @@ func (s *Socket) IsUse() (b bool) {
 	return
 }
 
+// Use ...
+func (s *Socket) Use() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.isUse = true
+}
+
 // Ping to detect whether the socket is closed.
 func (s *Socket) Ping() (b bool, err error) {
 	one := []byte{}
